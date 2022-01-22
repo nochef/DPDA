@@ -152,7 +152,22 @@ void loop(DPDA *dpda) {
 }
 
 // TODO: implement a parser that can operate on any given dpda.
-void init_dpda_transition(DPDA *dpda) {
+
+/*
+ * DPDA that accepts the language = { w#w' | w' equals w reversed }
+ */
+void init_dpda_transition1(DPDA *dpda) {
+	dpda->inputSymbols = "01#";
+	dpda->input = "111001#100111";
+
+	dpda->stackSymbols = "01#";
+	dpda->stack[0] = 'S';
+	dpda->stackSize = 1;
+
+	dpda->acceptingStates[2] = 1;
+
+	dpda->state = 0;
+	
 	// Transition = { from_state, from_input, from_stack, to_state, to_stack, valid }
 	dpda->transitions[0]  = (Transition) {0, '0', 'S', 1, "S0", 1};
 	dpda->transitions[1]  = (Transition) {0, '1', 'S', 1, "S1", 1};
@@ -170,21 +185,59 @@ void init_dpda_transition(DPDA *dpda) {
 	dpda->transitions[10] = (Transition) {2, NONEC, 'S', 2, NONES, 1};
 }
 
+/*
+ * DPDA that accepts the langauge = { {a,b}* | amount of a == amount of b }
+ */
+void init_dpda_transition2(DPDA *dpda) {
+	dpda->inputSymbols = "ab";
+	dpda->input = "abababababbbbaaabbbaabaa";
+
+	dpda->stackSymbols = "ab";
+	dpda->stack[0] = 'S';
+	dpda->stackSize = 1;
+
+	dpda->acceptingStates[1] = 1;
+
+	dpda->state = 0;
+	
+	// Transition = { from_state, from_input, from_stack, to_state, to_stack, valid }
+	dpda->transitions[0]  = (Transition) {0, 'a', 'S', 0, "Sa", 1};
+	dpda->transitions[1]  = (Transition) {0, 'a', 'a', 0, "aa", 1};
+	
+	dpda->transitions[2]  = (Transition) {0, 'b', 'S', 0, "Sb", 1};
+	dpda->transitions[3]  = (Transition) {0, 'b', 'b', 0, "bb", 1};
+	
+	dpda->transitions[4]  = (Transition) {0, 'a', 'b', 0, NONES, 1};
+	dpda->transitions[5]  = (Transition) {0, 'b', 'a', 0, NONES, 1};
+	
+	dpda->transitions[6]  = (Transition) {0, NONEC, 'S', 1, NONES, 1};
+}
+
+/*
+ * DPDA that accepts the langauge = { a^(n)b^(n) | n >= 0 }
+ */
+void init_dpda_transition3(DPDA *dpda) {
+	dpda->inputSymbols = "ab";
+	dpda->input = "aaabbb";
+
+	dpda->stackSymbols = "ab";
+	dpda->stack[0] = 'S';
+	dpda->stackSize = 1;
+
+	dpda->state = 0;
+	
+	// Transition = { from_state, from_input, from_stack, to_state, to_stack, valid }
+	dpda->transitions[0]  = (Transition) {0, 'a', 'S', 0, "a", 1};
+	dpda->transitions[1]  = (Transition) {0, 'a', 'a', 0, "aa", 1};
+	dpda->transitions[2]  = (Transition) {0, 'b', 'a', 1, NONES, 1};
+	
+	dpda->transitions[3]  = (Transition) {1, 'b', 'a', 1, NONES, 1};
+}
+
 int main(void) {
 	DPDA dpda;
 	
-	dpda.inputSymbols = "01#";
-	dpda.input = "111001#100111";
-
-	dpda.stackSymbols = "01#";
-	dpda.stack[0] = 'S';
-	dpda.stackSize = 1;
-
-	dpda.acceptingStates[2] = 1;
-
-	dpda.state = 0;
-
-	init_dpda_transition(&dpda);
+	init_dpda_transition3(&dpda);
 	
 	loop(&dpda);
 	
