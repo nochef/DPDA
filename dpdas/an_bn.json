@@ -1,4 +1,5 @@
 {
+	"name":             "{ a^(n)b^(n) | n >= 0 }",
 	"input_symbols":    "ab",
 	
 	"stack_symbols":    "Sab",

@@ -38,8 +38,12 @@ typedef struct _Transition {
  * 7. Transition function: Transitions are represented by a function that maps
  *        (from_state, from_input, from_stack) to (to_state, to_stack)
  *        where from_input and from_stack are characters and to_stack is a string.
+ *        When a transition is made, the dpda changes from from_state to to_state, consumes the character on the
+ *        stack and pushes to_stack on top of the stack.
  */
 typedef struct _DPDA {
+	char* name;
+	
 	char* inputSymbols;
 	char* input;
 	size_t inputHead;
@@ -77,8 +81,8 @@ void dumpInput(DPDA *dpda) {
 }
 
 void dumpDPDA(DPDA *dpda) {
-	printf("DPDA:\n");
-
+	printf("DPDA %s:\n", dpda->name);
+	
 	printf("    State: %d\n", dpda->state);
 	
 	printf("    Stack (size = %zu): ", dpda->stackSize);
@@ -98,8 +102,6 @@ void dumpDPDA(DPDA *dpda) {
 		printf("        from (%d, %c, %c) to (%d, %s)\n", t.from_state, from_input, from_stack, t.to_state, to_stack);
 		i++;
 	}
-
-	printf("\n");
 }
 
 Transition* findTransition(DPDA *dpda) {
@@ -166,11 +168,12 @@ int loop(DPDA *dpda) {
 		t = findTransition(dpda);
 	}
 
-	int result = check_DPDA_accepts(dpda);
 	dumpDPDA(dpda);
+	int result = check_DPDA_accepts(dpda);
 	return result == 1 ? 0 : -1;
 }
 
+#define JSON_DPDA_NAME "name"
 #define JSON_INPUT_SYMBOLS "input_symbols"
 #define JSON_STACK_SYMBOLS "stack_symbols"
 #define JSON_STACK_INIT "stack_init"
@@ -203,8 +206,17 @@ DPDA* parseDPDA(DPDA *dpda, const char* const path) {
 		exit(1);
 	}
 
-	cJSON *input_symbols, *stack_symbols, *stack_init, *states, *transitions, *transition, *accepting;
+	cJSON *input_symbols, *stack_symbols, *stack_init, *states, *transitions, *transition, *accepting, *name;
 
+	name = cJSON_GetObjectItem(dpda_json, JSON_DPDA_NAME);
+	char* static_dpda_name = cJSON_GetStringValue(name);
+	if (static_dpda_name == NULL) {
+		static_dpda_name = "noname";
+	}
+	dpda->name = malloc(strlen(static_dpda_name) + 1);
+	memcpy(dpda->name, static_dpda_name, strlen(static_dpda_name));
+	dpda->name[strlen(static_dpda_name)] = 0;
+	
 	input_symbols = cJSON_GetObjectItem(dpda_json, JSON_INPUT_SYMBOLS);
 	assert(cJSON_IsString(input_symbols));
 
@@ -213,8 +225,6 @@ DPDA* parseDPDA(DPDA *dpda, const char* const path) {
 
 	states = cJSON_GetObjectItem(dpda_json, JSON_STATES);
 	assert(cJSON_IsString(states));
-	/* char *states_str = cJSON_GetStringValue(states); */
-	/* dpda->state = states_str[0] - '0'; */
 	
 	accepting = cJSON_GetObjectItem(dpda_json, JSON_ACCEPTING);
 	assert(cJSON_IsString(accepting));
@@ -229,34 +239,33 @@ DPDA* parseDPDA(DPDA *dpda, const char* const path) {
 	assert(cJSON_IsArray(transitions));
 
 	// TODO: save other information into dpda.
-	
 	char* acceptingStr = cJSON_GetStringValue(accepting);
 	for (size_t i = 0; i < strlen(acceptingStr); i++) {
 		assert(acceptingStr[i] >= '0' && acceptingStr[i] <= '9');
 		dpda->acceptingStates[acceptingStr[i] - '0'] = 1;
 	}
-	
+
+	// Initialize transitions
 	size_t i = 0;
 	cJSON_ArrayForEach(transition, transitions){
 		int from_state = cJSON_GetNumberValue(cJSON_GetObjectItem(transition, JSON_FROM_STATE));
 		char from_input = cJSON_GetStringValue(cJSON_GetObjectItem(transition, JSON_FROM_INPUT))[0];
 		char from_stack = cJSON_GetStringValue(cJSON_GetObjectItem(transition, JSON_FROM_STACK))[0];
 		int to_state = cJSON_GetNumberValue(cJSON_GetObjectItem(transition, JSON_TO_STATE));
-		
-		char* to_stack = cJSON_GetStringValue(cJSON_GetObjectItem(transition, JSON_TO_STACK));
-		char* dyn_to_stack = malloc(strlen(to_stack) + 1);
-		memcpy(dyn_to_stack, to_stack, strlen(to_stack));
-		dyn_to_stack[strlen(to_stack)] = 0;
-		if (strlen(to_stack) == 0) to_stack = NONES;
-		
+
 		dpda->transitions[i] = (Transition) {
 			.from_state = from_state,
 			.from_input = from_input,
 			.from_stack = from_stack,
 			.to_state = to_state,
-			.to_stack = dyn_to_stack,
 			.valid = 1
 		};
+		
+		char* static_to_stack = cJSON_GetStringValue(cJSON_GetObjectItem(transition, JSON_TO_STACK));
+		dpda->transitions[i].to_stack = malloc(strlen(static_to_stack) + 1);
+		memcpy(dpda->transitions[i].to_stack, static_to_stack, strlen(static_to_stack));
+		dpda->transitions[i].to_stack[strlen(static_to_stack)] = 0;
+		
 		
 		i++;
 	}
@@ -286,8 +295,7 @@ int main(int argc, char **argv) {
 	dpda->input = input;
 	dpda->inputHead = 0;
 	parseDPDA(dpda, dpda_config);
-	dumpDPDA(dpda);
-	
+
 	int result = loop(dpda);
 	
 	deleteDPDA(dpda);
