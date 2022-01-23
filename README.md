@@ -42,7 +42,7 @@ You can use your own DPDA config by creating a simple JSON file. This file can h
 			"from_stack": "S",
 			"to_state": 0,
 			"to_stack": "a"
-    },
+    		},
 		{
 			"from_state": 0,
 			"from_input": "a",
