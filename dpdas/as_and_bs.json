@@ -1,0 +1,61 @@
+{
+	"input_symbols":    "ab",
+	
+	"stack_symbols":    "Sab",
+	"stack_init":       "S",
+	
+	"states":           "01",
+	"accepting":        "1",
+
+	"transitions": [
+		{
+			"from_state": 0,
+			"from_input": "a",
+			"from_stack": "S",
+			"to_state": 0,
+			"to_stack": "Sa"
+		},
+		{
+			"from_state": 0,
+			"from_input": "a",
+			"from_stack": "a",
+			"to_state": 0,
+			"to_stack": "aa"
+		},
+		{
+			"from_state": 0,
+			"from_input": "b",
+			"from_stack": "S",
+			"to_state": 0,
+			"to_stack": "Sb"
+		},
+		{
+			"from_state": 0,
+			"from_input": "b",
+			"from_stack": "b",
+			"to_state": 0,
+			"to_stack": "bb"
+		},
+		{
+			"from_state": 0,
+			"from_input": "a",
+			"from_stack": "b",
+			"to_state": 0,
+			"to_stack": ""
+		},
+		{
+			"from_state": 0,
+			"from_input": "b",
+			"from_stack": "a",
+			"to_state": 0,
+			"to_stack": ""
+		},
+		{
+			"from_state": 0,
+			"from_input": "",
+			"from_stack": "S",
+			"to_state": 1,
+			"to_stack": ""
+		}
+	]
+}

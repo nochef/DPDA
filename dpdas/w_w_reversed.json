@@ -1,0 +1,89 @@
+{
+	"input_symbols":    "01",
+	
+	"stack_symbols":    "S01",
+	"stack_init":       "S",
+	
+	"states":           "012",
+	"accepting":        "2",
+
+	"transitions": [
+		{
+			"from_state": 0,
+			"from_input": "0",
+			"from_stack": "S",
+			"to_state": 1,
+			"to_stack": "S0"
+		},
+		{
+			"from_state": 0,
+			"from_input": "1",
+			"from_stack": "S",
+			"to_state": 1,
+			"to_stack": "S1"
+		},
+		{
+			"from_state": 1,
+			"from_input": "0",
+			"from_stack": "0",
+			"to_state": 1,
+			"to_stack": "00"
+		},
+		{
+			"from_state": 1,
+			"from_input": "0",
+			"from_stack": "1",
+			"to_state": 1,
+			"to_stack": "10"
+		},
+		{
+			"from_state": 1,
+			"from_input": "1",
+			"from_stack": "0",
+			"to_state": 1,
+			"to_stack": "01"
+		},
+		{
+			"from_state": 1,
+			"from_input": "1",
+			"from_stack": "1",
+			"to_state": 1,
+			"to_stack": "11"
+		},
+		{
+			"from_state": 1,
+			"from_input": "#",
+			"from_stack": "0",
+			"to_state": 2,
+			"to_stack": "0"
+		},
+		{
+			"from_state": 1,
+			"from_input": "#",
+			"from_stack": "1",
+			"to_state": 2,
+			"to_stack": "1"
+		},
+		{
+			"from_state": 2,
+			"from_input": "0",
+			"from_stack": "0",
+			"to_state": 2,
+			"to_stack": ""
+		},
+		{
+			"from_state": 2,
+			"from_input": "1",
+			"from_stack": "1",
+			"to_state": 2,
+			"to_stack": ""
+		},
+		{
+			"from_state": 2,
+			"from_input": "",
+			"from_stack": "S",
+			"to_state": 2,
+			"to_stack": ""
+		}
+	]
+}

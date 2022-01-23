@@ -3,10 +3,14 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <assert.h>
+
+#include "lib/cJSON.h"
 
 #define STACK_CAP 64
 #define STATE_CAP 64
 #define TRANSITIONS_CAP 1024
+
 #define NONEC '\0'
 #define NONES "\0"
 
@@ -83,6 +87,18 @@ void dumpDPDA(DPDA *dpda) {
 	printf("    Input (head = %zu): ", dpda->inputHead);
 	dumpInput(dpda);
 
+	printf("    Transitions:\n");
+	size_t i = 0;
+	Transition t;
+	while(dpda->transitions[i].valid != 0) {
+		t = dpda->transitions[i];
+		char *to_stack = strlen(t.to_stack) == 0 ? "_" : t.to_stack;
+		char from_input = t.from_input == NONEC ? '_' : t.from_input;
+		char from_stack = t.from_stack == NONEC ? '_' : t.from_stack;
+		printf("        from (%d, %c, %c) to (%d, %s)\n", t.from_state, from_input, from_stack, t.to_state, to_stack);
+		i++;
+	}
+
 	printf("\n");
 }
 
@@ -126,8 +142,7 @@ int check_DPDA_accepts(DPDA *dpda) {
 	}
 }
 
-
-void loop(DPDA *dpda) {
+int loop(DPDA *dpda) {
 	Transition *t = findTransition(dpda);
 
 	// loop until no transition found
@@ -136,110 +151,146 @@ void loop(DPDA *dpda) {
 #if DEBUG
 		dumpDPDA(dpda);
 #endif
+		// Change stack
 		memcpy(&dpda->stack[dpda->stackSize - 1], t->to_stack, strlen(t->to_stack));
-		if (!(dpda->stackSize == 0 && strlen(t->to_stack) == 0))
-			dpda->stackSize += strlen(t->to_stack) - 1;
+		dpda->stackSize += strlen(t->to_stack) - 1;
+		if (dpda->stackSize >= STACK_CAP) dpda->stackSize = 0;
 
+		// Change state
 		dpda->state = t->to_state;
+
+		// Move input
 		if (dpda->inputHead < strlen(dpda->input))
 			dpda->inputHead++;
 		
 		t = findTransition(dpda);
 	}
 
-	check_DPDA_accepts(dpda);
+	int result = check_DPDA_accepts(dpda);
 	dumpDPDA(dpda);
+	return result == 1 ? 0 : -1;
 }
 
-// TODO: implement a parser that can operate on any given dpda.
+#define JSON_INPUT_SYMBOLS "input_symbols"
+#define JSON_STACK_SYMBOLS "stack_symbols"
+#define JSON_STACK_INIT "stack_init"
+#define JSON_STATES "states"
+#define JSON_ACCEPTING "accepting"
+#define JSON_TRANSITIONS "transitions"
+#define JSON_FROM_STATE "from_state"
+#define JSON_FROM_INPUT "from_input"
+#define JSON_FROM_STACK "from_stack"
+#define JSON_TO_STATE "to_state"
+#define JSON_TO_STACK "to_stack"
 
-/*
- * DPDA that accepts the language = { w#w' | w' equals w reversed }
- */
-void init_dpda_transition1(DPDA *dpda) {
-	dpda->inputSymbols = "01#";
-	dpda->input = "111001#100111";
+DPDA* parseDPDA(DPDA *dpda, const char* const path) {
+	FILE *f = fopen(path, "r");
+	fseek(f, 0, SEEK_END);
+	long fsize = ftell(f);
+	fseek(f, 0, SEEK_SET);
+	char *buf = malloc(fsize + 1);
+	buf[fsize] = 0;
+	fread(buf, fsize, 1, f);
+	fclose(f);
+	
+	cJSON *dpda_json = cJSON_Parse(buf);
+	if (dpda_json == NULL) {
+		const char *error_ptr = cJSON_GetErrorPtr();
+		if (error_ptr != NULL){
+			fprintf(stderr, "Error before: %s\n", error_ptr);
+		}
+		fprintf(stderr, "ERROR: parsing json input failed.\n");
+		exit(1);
+	}
 
-	dpda->stackSymbols = "01#";
-	dpda->stack[0] = 'S';
-	dpda->stackSize = 1;
+	cJSON *input_symbols, *stack_symbols, *stack_init, *states, *transitions, *transition, *accepting;
 
-	dpda->acceptingStates[2] = 1;
+	input_symbols = cJSON_GetObjectItem(dpda_json, JSON_INPUT_SYMBOLS);
+	assert(cJSON_IsString(input_symbols));
 
-	dpda->state = 0;
+	stack_symbols = cJSON_GetObjectItem(dpda_json, JSON_STACK_SYMBOLS);
+	assert(cJSON_IsString(stack_symbols));
+
+	states = cJSON_GetObjectItem(dpda_json, JSON_STATES);
+	assert(cJSON_IsString(states));
+	/* char *states_str = cJSON_GetStringValue(states); */
+	/* dpda->state = states_str[0] - '0'; */
 	
-	// Transition = { from_state, from_input, from_stack, to_state, to_stack, valid }
-	dpda->transitions[0]  = (Transition) {0, '0', 'S', 1, "S0", 1};
-	dpda->transitions[1]  = (Transition) {0, '1', 'S', 1, "S1", 1};
+	accepting = cJSON_GetObjectItem(dpda_json, JSON_ACCEPTING);
+	assert(cJSON_IsString(accepting));
 	
-	dpda->transitions[2]  = (Transition) {1, '0', '0', 1, "00", 1};
-	dpda->transitions[3]  = (Transition) {1, '0', '1', 1, "10", 1};
-	dpda->transitions[4]  = (Transition) {1, '1', '0', 1, "01", 1};
-	dpda->transitions[5]  = (Transition) {1, '1', '1', 1, "11", 1};
+	stack_init = cJSON_GetObjectItem(dpda_json, JSON_STACK_INIT);
+	assert(cJSON_IsString(stack_init));
+	char *stack_init_str = cJSON_GetStringValue(stack_init);
+	memcpy(dpda->stack, stack_init_str, strlen(stack_init_str));
+	dpda->stackSize = strlen(stack_init_str);
 	
-	dpda->transitions[6]  = (Transition) {1, '#', '0', 2, "0", 1};
-	dpda->transitions[7]  = (Transition) {1, '#', '1', 2, "1", 1};
+	transitions = cJSON_GetObjectItem(dpda_json, JSON_TRANSITIONS);
+	assert(cJSON_IsArray(transitions));
+
+	// TODO: save other information into dpda.
 	
-	dpda->transitions[8]  = (Transition) {2, '0', '0', 2, NONES, 1};
-	dpda->transitions[9]  = (Transition) {2, '1', '1', 2, NONES, 1};
-	dpda->transitions[10] = (Transition) {2, NONEC, 'S', 2, NONES, 1};
+	char* acceptingStr = cJSON_GetStringValue(accepting);
+	for (size_t i = 0; i < strlen(acceptingStr); i++) {
+		assert(acceptingStr[i] >= '0' && acceptingStr[i] <= '9');
+		dpda->acceptingStates[acceptingStr[i] - '0'] = 1;
+	}
+	
+	size_t i = 0;
+	cJSON_ArrayForEach(transition, transitions){
+		int from_state = cJSON_GetNumberValue(cJSON_GetObjectItem(transition, JSON_FROM_STATE));
+		char from_input = cJSON_GetStringValue(cJSON_GetObjectItem(transition, JSON_FROM_INPUT))[0];
+		char from_stack = cJSON_GetStringValue(cJSON_GetObjectItem(transition, JSON_FROM_STACK))[0];
+		int to_state = cJSON_GetNumberValue(cJSON_GetObjectItem(transition, JSON_TO_STATE));
+		
+		char* to_stack = cJSON_GetStringValue(cJSON_GetObjectItem(transition, JSON_TO_STACK));
+		char* dyn_to_stack = malloc(strlen(to_stack) + 1);
+		memcpy(dyn_to_stack, to_stack, strlen(to_stack));
+		dyn_to_stack[strlen(to_stack)] = 0;
+		if (strlen(to_stack) == 0) to_stack = NONES;
+		
+		dpda->transitions[i] = (Transition) {
+			.from_state = from_state,
+			.from_input = from_input,
+			.from_stack = from_stack,
+			.to_state = to_state,
+			.to_stack = dyn_to_stack,
+			.valid = 1
+		};
+		
+		i++;
+	}
+	
+	cJSON_Delete(dpda_json);
+	free(buf);
+	return dpda;
 }
 
-/*
- * DPDA that accepts the langauge = { {a,b}* | amount of a == amount of b }
- */
-void init_dpda_transition2(DPDA *dpda) {
-	dpda->inputSymbols = "ab";
-	dpda->input = "abababababbbbaaabbbaabaa";
-
-	dpda->stackSymbols = "ab";
-	dpda->stack[0] = 'S';
-	dpda->stackSize = 1;
-
-	dpda->acceptingStates[1] = 1;
-
-	dpda->state = 0;
-	
-	// Transition = { from_state, from_input, from_stack, to_state, to_stack, valid }
-	dpda->transitions[0]  = (Transition) {0, 'a', 'S', 0, "Sa", 1};
-	dpda->transitions[1]  = (Transition) {0, 'a', 'a', 0, "aa", 1};
-	
-	dpda->transitions[2]  = (Transition) {0, 'b', 'S', 0, "Sb", 1};
-	dpda->transitions[3]  = (Transition) {0, 'b', 'b', 0, "bb", 1};
-	
-	dpda->transitions[4]  = (Transition) {0, 'a', 'b', 0, NONES, 1};
-	dpda->transitions[5]  = (Transition) {0, 'b', 'a', 0, NONES, 1};
-	
-	dpda->transitions[6]  = (Transition) {0, NONEC, 'S', 1, NONES, 1};
+void deleteDPDA(DPDA *dpda) {
+	free(dpda);
 }
 
-/*
- * DPDA that accepts the langauge = { a^(n)b^(n) | n >= 0 }
- */
-void init_dpda_transition3(DPDA *dpda) {
-	dpda->inputSymbols = "ab";
-	dpda->input = "aaabbb";
-
-	dpda->stackSymbols = "ab";
-	dpda->stack[0] = 'S';
-	dpda->stackSize = 1;
-
-	dpda->state = 0;
-	
-	// Transition = { from_state, from_input, from_stack, to_state, to_stack, valid }
-	dpda->transitions[0]  = (Transition) {0, 'a', 'S', 0, "a", 1};
-	dpda->transitions[1]  = (Transition) {0, 'a', 'a', 0, "aa", 1};
-	dpda->transitions[2]  = (Transition) {0, 'b', 'a', 1, NONES, 1};
-	
-	dpda->transitions[3]  = (Transition) {1, 'b', 'a', 1, NONES, 1};
+char* readArgv(char ***argv) {
+	char *arg = **argv;
+	(*argv)++;
+	return arg;
 }
 
-int main(void) {
-	DPDA dpda;
+int main(int argc, char **argv) {
+	(void) argc;
+	DPDA *dpda = calloc(1, sizeof(DPDA));
 	
-	init_dpda_transition3(&dpda);
+	readArgv(&argv);
+	char *dpda_config = readArgv(&argv);
+	char *input = readArgv(&argv);
+	dpda->input = input;
+	dpda->inputHead = 0;
+	parseDPDA(dpda, dpda_config);
+	dumpDPDA(dpda);
 	
-	loop(&dpda);
+	int result = loop(dpda);
 	
-	return 0;
+	deleteDPDA(dpda);
+	
+	return result;
 }
