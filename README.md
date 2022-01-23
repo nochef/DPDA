@@ -2,7 +2,8 @@ Deterministic Pushdown Automaton
 
 # Simple Usage
 ```
-$ make && ./main <dpda_config.json> <input>
+$ make
+$ ./main <dpda_config.json> <input>
 ```
 
 # Use own DPDA configs
