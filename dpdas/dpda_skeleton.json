@@ -1,0 +1,66 @@
+{
+	// Optional:
+	"name":             "{a,b}*",
+
+	// Mandatory:
+	"input_symbols":    "ab",
+	
+	"stack_symbols":    "Sab",
+	"stack_init":       "S",    // Formally, this has to be one character but the code also works with mutliple.
+	
+	"states":           "01",
+	"accepting":        "1",
+
+	"transitions": [
+		{
+			"from_state": 0,
+			"from_input": "a",
+			"from_stack": "S",
+			"to_state": 0,
+			"to_stack": "Sa"
+		},
+		{
+			"from_state": 0,
+			"from_input": "a",
+			"from_stack": "a",
+			"to_state": 0,
+			"to_stack": "aa"
+		},
+		{
+			"from_state": 0,
+			"from_input": "b",
+			"from_stack": "S",
+			"to_state": 0,
+			"to_stack": "Sb"
+		},
+		{
+			"from_state": 0,
+			"from_input": "b",
+			"from_stack": "b",
+			"to_state": 0,
+			"to_stack": "bb"
+		},
+		{
+			"from_state": 0,
+			"from_input": "a",
+			"from_stack": "b",
+			"to_state": 0,
+			"to_stack": ""    // Empty stack write back. This will just consume the top element of the stack.
+		},
+		{
+			"from_state": 0,
+			"from_input": "b",
+			"from_stack": "a",
+			"to_state": 0,
+			"to_stack": ""
+		},
+		{
+			"from_state": 0,
+			"from_input": "",    // Empty input. This will transition will only trigger after the input head
+			                     // moved over the entire word and is at its end.
+			"from_stack": "S",
+			"to_state": 1,
+			"to_stack": ""
+		}
+	]
+}
