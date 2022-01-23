@@ -36,34 +36,34 @@ You can use your own DPDA config by creating a simple JSON file. This file can h
 - Transitions: An array of single transitions. Transitions are described below.
 ```json
 "transitions": [
-    {
-      "from_state": 0,
-			"from_input": "a",
-			"from_stack": "S",
-			"to_state": 0,
-			"to_stack": "a"
-    		},
-		{
-			"from_state": 0,
-			"from_input": "a",
-			"from_stack": "a",
-			"to_state": 0,
-			"to_stack": "aa"
-		},
-		{
-			"from_state": 0,
-			"from_input": "b",
-			"from_stack": "a",
-			"to_state": 1,
-			"to_stack": ""
-		},
-		{
-			"from_state": 1,
-			"from_input": "b",
-			"from_stack": "a",
-			"to_state": 1,
-			"to_stack": ""
-		}
+	{
+		"from_state": 0,
+		"from_input": "a",
+		"from_stack": "S",
+		"to_state": 0,
+		"to_stack": "a"
+	},
+	{
+		"from_state": 0,
+		"from_input": "a",
+		"from_stack": "a",
+		"to_state": 0,
+		"to_stack": "aa"
+	},
+	{
+		"from_state": 0,
+		"from_input": "b",
+		"from_stack": "a",
+		"to_state": 1,
+		"to_stack": ""
+	},
+	{
+		"from_state": 1,
+		"from_input": "b",
+		"from_stack": "a",
+		"to_state": 1,
+		"to_stack": ""
+	}
 ]
 ```
 
